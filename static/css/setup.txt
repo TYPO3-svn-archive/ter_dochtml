@@ -1,0 +1,77 @@
+
+plugin.ter_doc_html {
+	_CSS_DEFAULT_STYLE (
+		
+	/* -- NAVIGATION ----------------------------------------------------------- */
+
+		div.tx-terdochtml-topbar {
+			width: 100%;
+		}
+
+		table.tx-terdochtml-navigation {
+			width: 100%;
+			border: 0;
+			background-color: #E3F3C0;
+		}
+		
+		td.tx-terdochtml-navigation-left {
+			text-align: left;
+			width: 33%;
+		}
+		td.tx-terdochtml-navigation-center {
+			text-align: center;
+		}
+		td.tx-terdochtml-navigation-right {
+			text-align: right;
+			width: 33%;
+		}
+
+	/* -- PARAGRAPHS ----------------------------------------------------------- */
+
+		div.tx-terdochtml p {
+			margin-bottom: 5px;
+			line-height: 140%;
+		}
+
+
+	/* -- IMAGES --------------------------------------------------------------- */
+	
+		img.tx-terdochtml-clickenlarge {
+			border: 1px solid black;
+		}
+		img.tx-terdochtml-inline {
+			border: none;
+			vertical-align: middle;
+			margin: 2px;
+		}
+
+	/* -- TABLES --------------------------------------------------------------- */
+	
+		div.tx-terdochtml div.informaltable table {
+			border: 1px solid black;
+			margin: 10px 0 10px 0;
+			border-collapse: collapse;
+		}
+
+		div.tx-terdochtml div.informaltable table td {	
+			padding: 4px;
+		}
+		
+		div.tx-terdochtml div.informaltable table td, div.tx-terdochtml div.informaltable table td p {
+			margin-bottom: 5px;
+			line-height: 110%;
+		}
+
+	/* -- LISTS --------------------------------------------------------------- */
+	
+		div.tx-terdochtml ul {	
+			margin-left:35px; 
+			padding: 0;
+			line-height: 140%
+		}
+
+		div.tx-terdochtml ul li.level-1{	
+			font-weight: bold;
+		}
+	)
+}
