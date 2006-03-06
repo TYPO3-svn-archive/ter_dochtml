@@ -1,5 +1,7 @@
-(add new changes on top of this file)
+05.03.2006 Robert Lemke	<robert@typo3.org>
+	~ Changed class definition of tx_terdochtml_readonline: now extends tx_terdoc_documentformat_display
+	# Added workaround for HTML rendering: The XSLT produces an <?xml and DOCTYPE declaration - these two lines are removed manually when rendering the FE output. Should be solved within the XSL later on
 
-05-09-25 Robert Lemke  <robert@typo3.org>
+25.09.2005 Robert Lemke  <robert@typo3.org>
 
 	* Initial release

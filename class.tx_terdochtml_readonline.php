@@ -3,7 +3,7 @@
 /***************************************************************
 *  Copyright notice
 *
-*  (c) 2005 Robert Lemke (robert@typo3.org)
+*  (c) 2005-2006 Robert Lemke (robert@typo3.org)
 *  All rights reserved
 *
 *  This script is part of the TYPO3 project. The TYPO3 project is
@@ -29,8 +29,16 @@
  *
  * @author	Robert Lemke <robert@typo3.org>
  */
+/**
+ * [CLASS/FUNCTION INDEX of SCRIPT]
+ *
+ *
+ */
 
-class tx_terdochtml_readonline {
+require_once (t3lib_extMgm::extPath('ter_doc').'class.tx_terdoc_api.php');
+require_once (t3lib_extMgm::extPath('ter_doc').'class.tx_terdoc_documentformat.php');
+
+class tx_terdochtml_readonline extends tx_terdoc_documentformat_display {
 
 	/**
 	 * Renders the cache for online reading of documents. The result consists
@@ -86,9 +94,10 @@ class tx_terdochtml_readonline {
 	public function renderDisplay ($extensionKey, $version, &$pObj) {
 		global $TSFE;
 		
-		$manualArr = $this->db_fetchManualRecord ($extensionKey, $version);
+		$docApiObj = tx_terdoc_api::getInstance();
 
-		$documentDir = $this->getDocumentDirOfExtensionVersion ($extensionKey, $version);		
+		$manualArr = $this->db_fetchManualRecord ($extensionKey, $version);
+		$documentDir = $docApiObj->getDocumentDirOfExtensionVersion ($extensionKey, $version);		
 		$tocArr = unserialize (@file_get_contents ($documentDir.'toc.dat'));
 		if (!is_array ($tocArr)) return 'ERROR: Corrupted table of content! (renderDisplay)';
 		
@@ -103,9 +112,12 @@ class tx_terdochtml_readonline {
 						
 			$currentChapterFileName = 'ch'.($currentChapter < 10 ? '0' : '') . $currentChapter . ($currentSection > 1 ? 's'.($currentSection < 10 ? '0' : '') . $currentSection : '').'.html';
 	
-			$previousLabel = $this->csConvHSC ($previousChapter.'.'.$previousSection.'.' . $tocArr[$previousChapter]['sections'][$previousSection]['title']);
-			$nextLabel = $this->csConvHSC ($nextChapter.'.'.$nextSection.'.'. $tocArr[$nextChapter]['sections'][$nextSection]['title']);
-			$currentChapterLabel = $this->csConvHSC ($currentChapter.'.'. $tocArr[$currentChapter]['title']);
+			$previousLabel = $docApiObj->csConvHSC ($previousChapter.'.'.$previousSection.'.' . $tocArr[$previousChapter]['sections'][$previousSection]['title']);
+			$nextLabel = $docApiObj->csConvHSC ($nextChapter.'.'.$nextSection.'.'. $tocArr[$nextChapter]['sections'][$nextSection]['title']);
+			$currentChapterLabel = $docApiObj->csConvHSC ($currentChapter.'.'. $tocArr[$currentChapter]['title']);
+			
+			if (!strlen($previousLabel)) $previousLabel = $this->getLL('general_previous','',1); 
+			if (!strlen($nextLabel)) $nextLabel = $this->getLL('general_next','',1); 
 			
 			$previousLink = isset ($previousChapter) ? $pObj->pi_linkTP_keepPIvars($previousLabel, array('html_readonline_chapter' => $previousChapter, 'html_readonline_section' => $previousSection), 1) : '&nbsp';
 			$nextLink = isset ($nextChapter) ? $pObj->pi_linkTP_keepPIvars($nextLabel, array('html_readonline_chapter' => $nextChapter, 'html_readonline_section' => $nextSection), 1) : '&nbsp';
@@ -124,6 +136,15 @@ class tx_terdochtml_readonline {
 			
 			$chapterHTML = $TSFE->csConv (file_get_contents ($documentDir.'html_online/'.$currentChapterFileName), 'utf-8');
 			$chapterHTML = $this->renderDisplay_renderImages($chapterHTML, $documentDir, $pObj);
+
+				// Remove first two lines (<?xml and DOCTYPE declaration). Just a workaround until we have fixed the XSLT:			
+			$chapterHTMLArr = explode (chr(10), $this->renderDisplay_renderImages($chapterHTML, $documentDir, $pObj));
+			unset ($chapterHTMLArr[0]);
+			unset ($chapterHTMLArr[1]);
+			$chapterHTML = implode (chr(10), $chapterHTMLArr); 
+
+			$TSFE->altPageTitle = 'Documentation: '.$docApiObj->csConvHSC($manualArr['title']).' ('.$tocArr[$currentChapter]['title'].')';
+			$TSFE->indexedDocTitle = $TSFE->altPageTitle;
 
 			$content = '
 				  <br />
@@ -153,13 +174,10 @@ class tx_terdochtml_readonline {
 	 * @access	public
 	 */
 	public function isAvailable ($extensionKey, $version) {
-		$documentDir = $this->getDocumentDirOfExtensionVersion ($extensionKey, $version);
+		$docApiObj = tx_terdoc_api::getInstance();		
+		$documentDir = $docApiObj->getDocumentDirOfExtensionVersion ($extensionKey, $version);
 		return @is_file ($documentDir.'html_online/ch01.html');
 	}
-
-
-
-
 
 	/**
 	 * Renders the table of content from the given TOC array
@@ -171,14 +189,19 @@ class tx_terdochtml_readonline {
 	 * @access	protected
 	 */
 	protected function renderDisplay_renderTOC ($tocArr, $manualArr, &$pObj) {
+		global $TSFE;
 
 		$output = '';
+		$docApiObj = tx_terdoc_api::getInstance();		
 				
 		if (is_array ($tocArr) && is_array($manualArr)) {
-			$title = $this->csConvHSC($manualArr['title']);
-			$author =  $pObj->cObj->getTypoLink ($this->csConvHSC($manualArr['authorname']), $manualArr['authoremail']);
+			$title = $docApiObj->csConvHSC($manualArr['title']);
+			$author =  $pObj->cObj->getTypoLink ($docApiObj->csConvHSC($manualArr['authorname']), $manualArr['authoremail']);
 			$email =  $pObj->cObj->getTypoLink (implode ('@<span style="display:none;">no spam please</span>', explode ('@', $manualArr['authoremail'])), $manualArr['authoremail']);	
-			$versionInfo = '<p>This document is related to version '.$manualArr['version'].' of the extension '.$this->csConvHSC($manualArr['extensionkey']).'.</p>';
+			$versionInfo = '<p>This document is related to version '.$manualArr['version'].' of the extension '.$docApiObj->csConvHSC($manualArr['extensionkey']).'.</p>';
+
+			$TSFE->altPageTitle = 'Documentation: '.$title.'(Table of Contents)';					
+			$TSFE->indexedDocTitle = $TSFE->altPageTitle;
 
 			$output .= '
 				<h2>'.$title.'</h2>
@@ -191,17 +214,17 @@ class tx_terdochtml_readonline {
 			';
 			foreach ($tocArr as $chapterNr => $chapterArr) {
 				$output .= '<li class="level-1">'.$chapterNr.'. ';
-				$output .= $pObj->pi_linkTP_keepPIvars($this->csConvHSC($chapterArr['title']), array('html_readonline_chapter' => $chapterNr, 'html_readonline_section' => 1), 1);
+				$output .= $pObj->pi_linkTP_keepPIvars($docApiObj->csConvHSC($chapterArr['title']), array('html_readonline_chapter' => $chapterNr, 'html_readonline_section' => 1), 1);
 				if (is_array ($chapterArr['sections'])) {
 					$output .= '<ul>';
 					foreach ($chapterArr['sections'] as $sectionNr => $sectionArr) {
 						$output .= '<li class="level-2">'.$chapterNr.'.'.$sectionNr.'. ';
-						$output .= $pObj->pi_linkTP_keepPIvars($this->csConvHSC($sectionArr['title']), array('html_readonline_chapter' => $chapterNr, 'html_readonline_section' => $sectionNr), 1);
+						$output .= $pObj->pi_linkTP_keepPIvars($docApiObj->csConvHSC($sectionArr['title']), array('html_readonline_chapter' => $chapterNr, 'html_readonline_section' => $sectionNr), 1);
 						if (is_array ($sectionArr['subsections'])) {
 							$output .= '<ul>';
 							foreach ($sectionArr['subsections'] as $subSectionNr => $subSectionArr) {
 								$output .= '<li class="level-3">';
-								$output .= $pObj->pi_linkTP_keepPIvars($this->csConvHSC($subSectionArr['title']), array('html_readonline_chapter' => $chapterNr, 'html_readonline_section' => $sectionNr), 1);
+								$output .= $pObj->pi_linkTP_keepPIvars($docApiObj->csConvHSC($subSectionArr['title']), array('html_readonline_chapter' => $chapterNr, 'html_readonline_section' => $sectionNr), 1);
 								$output .= '</li>';
 							}	
 							$output .= '</ul>';
@@ -255,7 +278,7 @@ class tx_terdochtml_readonline {
 
 		$imageConf = array (
 			'file.' => array (
-				'maxW' => '600'
+				'maxW' => '520'
 			),
 			'params' => 'class="tx-terdochtml-clickenlarge"'
 		);
@@ -298,7 +321,8 @@ class tx_terdochtml_readonline {
 	 */
 	protected function getChapterSectionInformation ($extensionKey, $version, $pObj) {
 		
-		$documentDir = $this->getDocumentDirOfExtensionVersion ($extensionKey, $version);		
+		$docApiObj = tx_terdoc_api::getInstance();
+		$documentDir = $docApiObj->getDocumentDirOfExtensionVersion ($extensionKey, $version);		
 
 		$tocArr = unserialize (@file_get_contents ($documentDir.'toc.dat'));
 		if (!is_array ($tocArr)) return array();;
@@ -337,6 +361,44 @@ class tx_terdochtml_readonline {
 			'nextSection' => $nextSection
 		);
 	}
+
+
+		
+	/**
+	 * Renders the url part for a chapter. Called as a userfunction from REALURL!
+	 * 
+	 * @param	array		$params: Parameters passed by RealURL
+	 * @param	object		$ref: Reference to the RealURL object
+	 * @return	string		The rendered URL segment
+	 * @access	public 
+	 */
+	public function realurl_renderURLSegementForChapter ($params, $ref) {
+		global $TSFE;
+
+		$extensionKey = $ref->pObj->cHash_array['tx_terdoc_pi1[extensionkey]'];
+		$version = $ref->pObj->cHash_array['tx_terdoc_pi1[version]'];
+
+		$documentDir = tx_terdoc_api::getInstance()->getDocumentDirOfExtensionVersion ($extensionKey, $version);		
+		$tocArr = unserialize (@file_get_contents ($documentDir.'toc.dat'));
+
+		if (!is_array ($tocArr)) return $params['value'];
+
+		return $params['value'];
+	}
+
+	/**
+	 * Renders the url part for a section. Called as a userfunction from REALURL!
+	 * 
+	 * @param	array		$params: Parameters passed by RealURL
+	 * @param	object		$ref: Reference to the RealURL object
+	 * @return	string		The rendered URL segment
+	 * @access	public 
+	 */
+	public function realurl_renderURLSegementForSection ($params, $ref) {
+		return $params['value'];
+	}
+
+
 
 	/**
 	 * Returns one manual record from tx_terdoc_manuals for the specified
@@ -396,41 +458,5 @@ class tx_terdochtml_readonline {
 			// Remove this dir:
 		rmdir($removePath);
 	}
-
-	/**
-	 * Returns the full path of the document directory for the specified
-	 * extension version. If the path does not exist yet, it will be created - 
-	 * given that the typo3temp/tx_terdoc/documentscache/ dir exists.  
-	 * 
-	 * In the document directory all rendered documents are stored.
-	 * 
-	 * @param	string		$extensionKey: The extension key
-	 * @param	string		$version: The version string
-	 * @return	string		Full path to the document directory for the specified extension version
-	 */
-	protected function getDocumentDirOfExtensionVersion ($extensionKey, $version) {
-		$firstLetter = strtolower (substr ($extensionKey, 0, 1));
-		$secondLetter = strtolower (substr ($extensionKey, 1, 1));
-		$baseDir = PATH_site.'typo3temp/tx_terdoc/documentscache/';
-
- 		list ($majorVersion, $minorVersion, $devVersion) = t3lib_div::intExplode ('.', $version);
-		$fullPath = $baseDir.$firstLetter.'/'.$secondLetter.'/'.strtolower($extensionKey).'-'.$majorVersion.'.'.$minorVersion.'.'.$devVersion;
-						
-		return $fullPath.'/';		
-	}
-
-	/**
-	 * Processes the given string with htmlspecialchars and converts the result
-	 * from utf-8 to the charset of the current frontend
-	 * page 
-	 * 
-	 * @param	string	$string: The utf-8 string to convert
-	 * @return	string	The converted string
-	 * @access	protected
-	 */
-	protected function csConvHSC ($string) {
-		return $GLOBALS['TSFE']->csConv(htmlspecialchars($string), 'utf-8');
-	}
-
 }
 ?>
