@@ -93,7 +93,7 @@ class tx_terdochtml_readonline extends tx_terdoc_documentformat_display {
 	 */
 	public function renderDisplay ($extensionKey, $version, &$pObj) {
 		global $TSFE;
-		
+
 		$docApiObj = tx_terdoc_api::getInstance();
 
 		$manualArr = $this->db_fetchManualRecord ($extensionKey, $version);
@@ -157,7 +157,7 @@ class tx_terdochtml_readonline extends tx_terdoc_documentformat_display {
 				
 		$output = '
 			<div class="tx-terdochtml">
-				'.$content.'
+				'.$content.$debugOutput.'
 			</div>
 		';	
 		

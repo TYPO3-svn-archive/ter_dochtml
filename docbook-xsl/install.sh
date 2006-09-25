@@ -1,6 +1,6 @@
 #!/bin/bash
 # $Id$
-# $Source$ #
+# $Source: /cvsroot/typo3xdev/tx_terdochtml/docbook-xsl/install.sh,v $ #
 
 # install.sh - Set up catalogs & locating rules for a XML/XSLT distribution
 
