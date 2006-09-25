@@ -93,18 +93,19 @@ class tx_terdochtml_readonline extends tx_terdoc_documentformat_display {
 	 */
 	public function renderDisplay ($extensionKey, $version, &$pObj) {
 		global $TSFE;
-
+		
 		$docApiObj = tx_terdoc_api::getInstance();
 
 		$manualArr = $this->db_fetchManualRecord ($extensionKey, $version);
-		$documentDir = $docApiObj->getDocumentDirOfExtensionVersion ($extensionKey, $version);		
+		$documentDir = $docApiObj->getDocumentDirOfExtensionVersion ($extensionKey, $version);
+	
 		$tocArr = unserialize (@file_get_contents ($documentDir.'toc.dat'));
 		if (!is_array ($tocArr)) return 'ERROR: Corrupted table of content! (renderDisplay)';
 		
 		if (!intval($pObj->piVars['html_readonline_chapter'])) $pObj->piVars['html_readonline_chapter'] = 'toc';
 
 		if ($pObj->piVars['html_readonline_chapter'] == 'toc') {			
-			$content = $this->renderDisplay_renderTOC ($tocArr, $manualArr, $pObj);
+			$content = $this->renderDisplay_renderTOC ($tocArr, $manualArr, $documentDir, $pObj);
 		} else {
 			
 			$csInfoArr = $this->getChapterSectionInformation ($extensionKey, $version, $pObj);
@@ -157,7 +158,7 @@ class tx_terdochtml_readonline extends tx_terdoc_documentformat_display {
 				
 		$output = '
 			<div class="tx-terdochtml">
-				'.$content.$debugOutput.'
+				'.$content.'
 			</div>
 		';	
 		
@@ -184,15 +185,16 @@ class tx_terdochtml_readonline extends tx_terdoc_documentformat_display {
 	 *
 	 * @param	array		$tocArr: Array containing the table of content
 	 * @param	array		$manualArr: Database record of the current manual
+	 * @param	string		$documentDir: The document directory of the currently processed extension version
 	 * @param	object		$pObj: Reference to the plugin object
 	 * @return	string		HTML output - the table of content 
 	 * @access	protected
 	 */
-	protected function renderDisplay_renderTOC ($tocArr, $manualArr, &$pObj) {
+	protected function renderDisplay_renderTOC ($tocArr, $manualArr, $documentDir, &$pObj) {
 		global $TSFE;
 
 		$output = '';
-		$docApiObj = tx_terdoc_api::getInstance();		
+		$docApiObj = tx_terdoc_api::getInstance();			
 				
 		if (is_array ($tocArr) && is_array($manualArr)) {
 			$title = $docApiObj->csConvHSC($manualArr['title']);
@@ -223,9 +225,35 @@ class tx_terdochtml_readonline extends tx_terdoc_documentformat_display {
 						if (is_array ($sectionArr['subsections'])) {
 							$output .= '<ul>';
 							foreach ($sectionArr['subsections'] as $subSectionNr => $subSectionArr) {
+									//anchor hack start
+								$currentChapterFileName = 'ch'.($chapterNr < 10 ? '0' : '') . $chapterNr . ($sectionNr > 1 ? 's'.($sectionNr < 10 ? '0' : '') . $sectionNr : '').'.html';  
+								$chapterHTML = file_get_contents ($documentDir.'html_online/'.$currentChapterFileName);
+								   
+								preg_match_all('/(<h3 class="title"><a id="[^"]*"><\/a>)/',$chapterHTML,$anchor);
+									//filter out id
+								$pat[0]='/(<h3 class="title"><a id=")/';
+								$pat[1]= '/("><\/a>)/';
+								$repl[0]='';
+								$repl[1]='';
+								$anchor= preg_replace($pat,$repl,$anchor[0]);
 								$output .= '<li class="level-3">';
-								$output .= $pObj->pi_linkTP_keepPIvars($docApiObj->csConvHSC($subSectionArr['title']), array('html_readonline_chapter' => $chapterNr, 'html_readonline_section' => $sectionNr), 1);
+									$title = $GLOBALS['TSFE']->csConv(htmlspecialchars($subSectionArr['title']), 'utf-8');
+									if(preg_match('/(\&\#x201c\;)/',$title)){
+										$pat[0]= '/(\&\#x201c\;)/';
+										$pat[1]= '/(\&\#x201d\;)/';
+
+										$repl[0] = '&quot;';
+										$repl[1] = '&quot;';
+										
+										$modifiedTitle = preg_replace($pat,$repl,$title); 
+										$output .= preg_replace ('(" >'.$modifiedTitle.')','#'.$anchor[$subSectionNr-1].'" >'.$modifiedTitle.'',$pObj->pi_linkTP_keepPIvars($modifiedTitle, array('html_readonline_chapter' => $chapterNr, 'html_readonline_section' => $sectionNr), 1));    
+										$output .= '</li>';
+									}else{
+									$modifiedTitle = $this->escapeTitle($subSectionArr['title']);     
+								$output .= preg_replace ('(" >'.$modifiedTitle.')','#'.$anchor[$subSectionNr-1].'" >'.$docApiObj->csConvHSC($subSectionArr['title']).'',$pObj->pi_linkTP_keepPIvars($docApiObj->csConvHSC($subSectionArr['title']), array('html_readonline_chapter' => $chapterNr, 'html_readonline_section' => $sectionNr), 1));      
 								$output .= '</li>';
+									//end
+								}
 							}	
 							$output .= '</ul>';
 						}
@@ -457,6 +485,40 @@ class tx_terdochtml_readonline extends tx_terdoc_documentformat_display {
 		}
 			// Remove this dir:
 		rmdir($removePath);
+	}
+	
+	/**
+	 * Quote regular expression characters 
+	 * 
+	 * @param	string		$title: Section title
+	 * @return	void		
+	 * @access	protected
+	 */
+	protected function escapeTitle ($title) {
+		$title = $GLOBALS['TSFE']->csConv(htmlspecialchars($title), 'utf-8');
+		$title = $this->fixQuotes($title);
+		$modifiedTitle = preg_quote($title,'/');
+	
+		return $modifiedTitle;
+	}
+	
+	/**
+	 * Fix some ugly characters 
+	 * 
+	 * @param	string		$title: Section title
+	 * @return	void		
+	 * @access	protected
+	 */
+	protected function fixQuotes ($title) {
+		$pat[0]= '/(\&\#x201c\;)/';
+		$pat[1]= '/(\&\#x201d\;)/';
+		
+		$repl[0] = '&quot;';
+		$repl[1] = '&quot;';
+										
+		$html = preg_replace($pat,$repl,$title); 
+		
+		return $html;
 	}
 }
 ?>
