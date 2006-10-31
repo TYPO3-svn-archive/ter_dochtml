@@ -261,7 +261,7 @@ class tx_terdochtml_readonline extends tx_terdoc_documentformat_display {
 					}
 					$output .= '</ul>';
 				}
-				$linesArr[] = '</li>';
+				$output .= '</li>';
 			}
 			$output .= '
 				</ul>
@@ -491,7 +491,7 @@ class tx_terdochtml_readonline extends tx_terdoc_documentformat_display {
 	 * Quote regular expression characters
 	 *
 	 * @param	string		$title: Section title
-	 * @return	void
+	 * @return	string		Title string holding a backslash in front of every character that is part of the regular expression syntax
 	 * @access	protected
 	 */
 	protected function escapeTitle ($title) {
@@ -503,10 +503,10 @@ class tx_terdochtml_readonline extends tx_terdoc_documentformat_display {
 	}
 
 	/**
-	 * Fix some ugly characters
+	 * Fix quotation marks issue
 	 *
 	 * @param	string		$title: Section title
-	 * @return	void
+	 * @return	string
 	 * @access	protected
 	 */
 	protected function fixQuotes ($title) {
