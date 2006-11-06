@@ -225,7 +225,7 @@ class tx_terdochtml_readonline extends tx_terdoc_documentformat_display {
 						if (is_array ($sectionArr['subsections'])) {
 							$output .= '<ul>';
 							foreach ($sectionArr['subsections'] as $subSectionNr => $subSectionArr) {
-								$output .= $this->getChapterSubsectionAnchor($chapterNr, $sectionNr, $subSectionNr, $subSectionArr, $documentDir);
+								$output .= $this->getChapterSubsectionAnchor($chapterNr, $sectionNr, $subSectionNr, $subSectionArr, $documentDir, $pObj);
 							}
 							$output .= '</ul>';
 						}
@@ -233,7 +233,7 @@ class tx_terdochtml_readonline extends tx_terdoc_documentformat_display {
 					}
 					$output .= '</ul>';
 				}
-				$linesArr[] = '</li>';
+				$output .= '</li>';
 			}
 			$output .= '
 				</ul>
@@ -502,10 +502,12 @@ class tx_terdochtml_readonline extends tx_terdoc_documentformat_display {
 	 * @param	string		$subSectionNr: Subsection number
 	 * @param	array		$subSectionArr: Array containing subsection information
 	 * @param	string		$documentDir: The document directory of the currently processed extension version
+	 * @param	object		$pObj: Reference to the plugin object (pi_base child)
 	 * @return	string		HTML output - link list element containing anchor
 	 * @access	protected
 	 */
-	protected function getChapterSubsectionAnchor ($chapterNr, $sectionNr, $subSectionNr, $subSectionArr, $documentDir) {
+	protected function getChapterSubsectionAnchor ($chapterNr, $sectionNr, $subSectionNr, $subSectionArr, $documentDir, $pObj) {
+		$docApiObj = tx_terdoc_api::getInstance();
 		$currentChapterFileName = 'ch'.($chapterNr < 10 ? '0' : '') . $chapterNr . ($sectionNr > 1 ? 's'.($sectionNr < 10 ? '0' : '') . $sectionNr : '').'.html';
 		$chapterHTML = file_get_contents ($documentDir.'html_online/'.$currentChapterFileName);
 		$out = '<li class="level-3">';
@@ -526,11 +528,11 @@ class tx_terdochtml_readonline extends tx_terdoc_documentformat_display {
 			$repl[1] = '&quot;';
 
 			$modifiedTitle = preg_replace($pat,$repl,$title);
-			$out = preg_replace ('(" >'.$modifiedTitle.')','#'.$anchor[$subSectionNr-1].'" >'.$modifiedTitle.'',$pObj->pi_linkTP_keepPIvars($modifiedTitle, array('html_readonline_chapter' => $chapterNr, 'html_readonline_section' => $sectionNr), 1));
+			$out .= preg_replace ('(" >'.$modifiedTitle.')','#'.$anchor[$subSectionNr-1].'" >'.$modifiedTitle.'',$pObj->pi_linkTP_keepPIvars($modifiedTitle, array('html_readonline_chapter' => $chapterNr, 'html_readonline_section' => $sectionNr), 1));
 			$out .= '</li>';
 		} else {
 			$modifiedTitle = $this->escapeTitle($subSectionArr['title']);
-			$out = preg_replace ('(" >'.$modifiedTitle.')','#'.$anchor[$subSectionNr-1].'" >'.$docApiObj->csConvHSC($subSectionArr['title']).'',$pObj->pi_linkTP_keepPIvars($docApiObj->csConvHSC($subSectionArr['title']), array('html_readonline_chapter' => $chapterNr, 'html_readonline_section' => $sectionNr), 1));
+			$out .= preg_replace ('(" >'.$modifiedTitle.')','#'.$anchor[$subSectionNr-1].'" >'.$docApiObj->csConvHSC($subSectionArr['title']).'',$pObj->pi_linkTP_keepPIvars($docApiObj->csConvHSC($subSectionArr['title']), array('html_readonline_chapter' => $chapterNr, 'html_readonline_section' => $sectionNr), 1));
 			$out .= '</li>';
 		}
 		return $out;
