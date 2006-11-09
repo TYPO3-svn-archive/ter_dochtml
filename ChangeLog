@@ -1,3 +1,8 @@
+2006-11-09	Peter Fšrger	<p.foerger@dehrn.de>
+	
+	* Code cleanup: swapped the code responsible for the regex parsing into it's own function: getChapterSubsectionAnchor().
+	* Bugfix: output is now valid XHTML
+
 2006-09-25  Sebastian Kurfuerst  <sebastian@typo3.org>
 
 	* Changes by Peter Foerger  <p.foerger@dehrn.de> for the TOC rendering
